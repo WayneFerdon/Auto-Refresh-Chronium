@@ -8,12 +8,12 @@ import { getSettings, saveSettings, addLog, clearLogs, getLogs } from './utils/s
 // ═══════════════════════════════════════════════════════════
 
 const state = {
-  isRunning: false,
-  countdown: 0,
-  currentInterval: 10,
-  refreshCount: 0,
-  pageHashes: {},       // tabId -> hash string
-  tickIntervalId: null, // setInterval ID
+	isRunning: false,
+	countdown: 0,
+	currentInterval: 10,
+	refreshCount: 0,
+	pageHashes: {},       // tabId -> hash string
+	tickIntervalId: null, // setInterval ID
 };
 
 // ═══════════════════════════════════════════════════════════
@@ -21,10 +21,10 @@ const state = {
 // ═══════════════════════════════════════════════════════════
 
 chrome.runtime.onInstalled.addListener(async () => {
-  const settings = await getSettings();
-  state.currentInterval = settings.interval;
-  state.countdown = settings.interval;
-  updateBadge();
+	const settings = await getSettings();
+	state.currentInterval = settings.interval;
+	state.countdown = settings.interval;
+	updateBadge();
 });
 
 chrome.runtime.onStartup.addListener(() => restoreState());
@@ -33,44 +33,44 @@ chrome.runtime.onStartup.addListener(() => restoreState());
 restoreState();
 
 async function restoreState() {
-  try {
-    const result = await chrome.storage.session.get('refreshState');
-    if (result.refreshState && result.refreshState.isRunning) {
-      const saved = result.refreshState;
-      state.currentInterval = saved.currentInterval || 10;
-      state.refreshCount = saved.refreshCount || 0;
-      state.isRunning = true;
+	try {
+		const result = await chrome.storage.session.get('refreshState');
+		if (result.refreshState && result.refreshState.isRunning) {
+			const saved = result.refreshState;
+			state.currentInterval = saved.currentInterval || 10;
+			state.refreshCount = saved.refreshCount || 0;
+			state.isRunning = true;
 
-      // Calculate remaining time from saved target
-      if (saved.nextRefreshTime) {
-        const remaining = Math.max(1, Math.round((saved.nextRefreshTime - Date.now()) / 1000));
-        state.countdown = Math.min(remaining, state.currentInterval);
-      } else {
-        state.countdown = state.currentInterval;
-      }
+			// Calculate remaining time from saved target
+			if (saved.nextRefreshTime) {
+				const remaining = Math.max(1, Math.round((saved.nextRefreshTime - Date.now()) / 1000));
+				state.countdown = Math.min(remaining, state.currentInterval);
+			} else {
+				state.countdown = state.currentInterval;
+			}
 
-      startTick();
-      startKeepAlive();
-      updateBadge();
-    }
-  } catch (e) {
-    console.warn('Auto Refresh: Failed to restore state:', e);
-  }
+			startTick();
+			startKeepAlive();
+			updateBadge();
+		}
+	} catch (e) {
+		console.warn('Auto Refresh: Failed to restore state:', e);
+	}
 }
 
 async function persistState() {
-  try {
-    await chrome.storage.session.set({
-      refreshState: {
-        isRunning: state.isRunning,
-        currentInterval: state.currentInterval,
-        refreshCount: state.refreshCount,
-        nextRefreshTime: state.isRunning ? Date.now() + (state.countdown * 1000) : 0,
-      }
-    });
-  } catch (e) {
-    // Session storage may not be available
-  }
+	try {
+		await chrome.storage.session.set({
+			refreshState: {
+				isRunning: state.isRunning,
+				currentInterval: state.currentInterval,
+				refreshCount: state.refreshCount,
+				nextRefreshTime: state.isRunning ? Date.now() + (state.countdown * 1000) : 0,
+			}
+		});
+	} catch (e) {
+		// Session storage may not be available
+	}
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -78,30 +78,30 @@ async function persistState() {
 // ═══════════════════════════════════════════════════════════
 
 function startTick() {
-  stopTick();
-  state.tickIntervalId = setInterval(tick, 1000);
+	stopTick();
+	state.tickIntervalId = setInterval(tick, 1000);
 }
 
 function stopTick() {
-  if (state.tickIntervalId) {
-    clearInterval(state.tickIntervalId);
-    state.tickIntervalId = null;
-  }
+	if (state.tickIntervalId) {
+		clearInterval(state.tickIntervalId);
+		state.tickIntervalId = null;
+	}
 }
 
 async function tick() {
-  if (!state.isRunning) return;
+	if (!state.isRunning) return;
 
-  state.countdown--;
-  updateBadge();
-  broadcastState();
+	state.countdown--;
+	updateBadge();
+	broadcastState();
 
-  if (state.countdown <= 0) {
-    await performRefresh();
-  }
+	if (state.countdown <= 0) {
+		await performRefresh();
+	}
 
-  // Persist for recovery
-  persistState();
+	// Persist for recovery
+  	persistState();
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -109,18 +109,18 @@ async function tick() {
 // ═══════════════════════════════════════════════════════════
 
 function startKeepAlive() {
-  chrome.alarms.create('keepAlive', { periodInMinutes: 0.4 });
+  	chrome.alarms.create('keepAlive', { periodInMinutes: 0.4 });
 }
 
 function stopKeepAlive() {
-  chrome.alarms.clear('keepAlive');
+  	chrome.alarms.clear('keepAlive');
 }
 
 chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === 'keepAlive' && state.isRunning && !state.tickIntervalId) {
-    // Timer died, restart it
-    startTick();
-  }
+	if (alarm.name === 'keepAlive' && state.isRunning && !state.tickIntervalId) {
+		// Timer died, restart it
+		startTick();
+	}
 });
 
 // ═══════════════════════════════════════════════════════════
@@ -128,138 +128,138 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 // ═══════════════════════════════════════════════════════════
 
 async function performRefresh() {
-  const settings = await getSettings();
+	const settings = await getSettings();
 
-  // Check refresh limit
-  if (settings.limitEnabled && state.refreshCount >= settings.limitCount) {
-    await addLog({ type: 'limit', message: 'Refresh limit reached' });
+	// Check refresh limit
+	if (settings.limitEnabled && state.refreshCount >= settings.limitCount) {
+		await addLog({ type: 'limit', message: 'Refresh limit reached' });
 
-    if (settings.notificationsEnabled) {
-      safeNotify('limit-' + Date.now(), {
-        type: 'basic',
-        title: 'Auto Refresh Pro',
-        message: 'Refresh limit reached. Stopping.',
-        iconUrl: 'icons/icon128.png',
-      });
-    }
+		if (settings.notificationsEnabled) {
+			safeNotify('limit-' + Date.now(), {
+				type: 'basic',
+				title: 'Auto Refresh Pro',
+				message: 'Refresh limit reached. Stopping.',
+				iconUrl: 'icons/icon128.png',
+			});
+		}
 
-    doStop();
-    broadcastState();
-    return;
-  }
+		doStop();
+		broadcastState();
+		return;
+	}
 
-  // Get target tabs
-  const tabs = await getTargetTabs(settings);
+	// Get target tabs
+	const tabs = await getTargetTabs(settings);
 
-  if (tabs.length === 0) {
-    resetCountdown(settings);
-    return;
-  }
+	if (tabs.length === 0) {
+		resetCountdown(settings);
+		return;
+	}
 
-  for (const tab of tabs) {
-    try {
-      // Page change detection (before refresh)
-      if (settings.detectChanges) {
-        const shouldStop = await checkPageChange(tab, settings);
-        if (shouldStop) return;
-      }
+	for (const tab of tabs) {
+		try {
+			// Page change detection (before refresh)
+			if (settings.detectChanges) {
+				const shouldStop = await checkPageChange(tab, settings);
+				if (shouldStop) return;
+			}
 
-      // Hard refresh: clear origin cache first
-      if (settings.hardRefresh) {
-        try {
-          const origin = new URL(tab.url).origin;
-          await chrome.browsingData.remove({ origins: [origin] }, { cache: true });
-        } catch (e) {
-          // Silently continue
-        }
-      }
+			// Hard refresh: clear origin cache first
+			if (settings.hardRefresh) {
+				try {
+					const origin = new URL(tab.url).origin;
+					await chrome.browsingData.remove({ origins: [origin] }, { cache: true });
+				} catch (e) {
+					// Silently continue
+				}
+			}
 
-      // Reload the tab
-      await chrome.tabs.reload(tab.id, { bypassCache: settings.hardRefresh });
+			// Reload the tab
+			await chrome.tabs.reload(tab.id, { bypassCache: settings.hardRefresh });
 
-      await addLog({
-        type: 'refresh',
-        tabId: tab.id,
-        url: tab.url,
-        title: tab.title || 'Untitled',
-      });
-    } catch (e) {
-      console.error('Auto Refresh: Failed to refresh tab', tab.id, e);
-    }
-  }
+			await addLog({
+				type: 'refresh',
+				tabId: tab.id,
+				url: tab.url,
+				title: tab.title || 'Untitled',
+			});
+		} catch (e) {
+			console.error('Auto Refresh: Failed to refresh tab', tab.id, e);
+		}
+	}
 
-  state.refreshCount++;
-  resetCountdown(settings);
+	state.refreshCount++;
+	resetCountdown(settings);
 }
 
-async function getTargetTabs(settings) {
-  let tabs = [];
+	async function getTargetTabs(settings) {
+	let tabs = [];
 
-  try {
-    if (settings.allTabs) {
-      tabs = await chrome.tabs.query({});
-    } else if (settings.urls && settings.urls.length > 0) {
-      tabs = await chrome.tabs.query({});
-      tabs = tabs.filter(tab => matchesUrlList(tab.url, settings.urls, settings.matchMode));
-    } else {
-      const activeTabs = await chrome.tabs.query({ active: true, currentWindow: true });
-      if (activeTabs.length > 0) tabs = activeTabs;
-    }
-  } catch (e) {
-    console.error('Auto Refresh: Failed to query tabs:', e);
-  }
+	try {
+		if (settings.allTabs) {
+			tabs = await chrome.tabs.query({});
+		} else if (settings.urls && settings.urls.length > 0) {
+			tabs = await chrome.tabs.query({});
+			tabs = tabs.filter(tab => matchesUrlList(tab.url, settings.urls, settings.matchMode));
+		} else {
+			const activeTabs = await chrome.tabs.query({ active: true, currentWindow: true });
+			if (activeTabs.length > 0) tabs = activeTabs;
+		}
+	} catch (e) {
+		console.error('Auto Refresh: Failed to query tabs:', e);
+	}
 
-  // Filter out non-web pages
-  return tabs.filter(tab =>
-    tab.url &&
-    (tab.url.startsWith('http://') || tab.url.startsWith('https://'))
-  );
+	// Filter out non-web pages
+	return tabs.filter(tab =>
+		tab.url &&
+		(tab.url.startsWith('http://') || tab.url.startsWith('https://'))
+	);
 }
 
 async function checkPageChange(tab, settings) {
-  try {
-    const response = await chrome.tabs.sendMessage(tab.id, { type: 'GET_PAGE_HASH' });
-    if (response && response.hash) {
-      const prevHash = state.pageHashes[tab.id];
-      state.pageHashes[tab.id] = response.hash;
+  	try {
+		const response = await chrome.tabs.sendMessage(tab.id, { type: 'GET_PAGE_HASH' });
+		if (response && response.hash) {
+			const prevHash = state.pageHashes[tab.id];
+			state.pageHashes[tab.id] = response.hash;
 
-      if (prevHash && prevHash !== response.hash) {
-        await addLog({
-          type: 'change',
-          tabId: tab.id,
-          url: tab.url,
-          title: tab.title || 'Untitled',
-        });
+			if (prevHash && prevHash !== response.hash) {
+				await addLog({
+					type: 'change',
+					tabId: tab.id,
+					url: tab.url,
+					title: tab.title || 'Untitled',
+				});
 
-        if (settings.notificationsEnabled) {
-          safeNotify('change-' + Date.now(), {
-            type: 'basic',
-            title: 'Page Changed',
-            message: tab.title || tab.url,
-            iconUrl: 'icons/icon128.png',
-          });
-        }
+				if (settings.notificationsEnabled) {
+					safeNotify('change-' + Date.now(), {
+						type: 'basic',
+						title: 'Page Changed',
+						message: tab.title || tab.url,
+						iconUrl: 'icons/icon128.png',
+					});
+				}
 
-        if (settings.detectAction === 'stop') {
-          doStop();
-          broadcastState();
-          return true; // Signal to stop
-        }
-      }
-    }
-  } catch (e) {
-    // Content script not available (chrome:// pages, etc.)
-  }
-  return false;
+				if (settings.detectAction === 'stop') {
+					doStop();
+					broadcastState();
+					return true; // Signal to stop
+				}
+			}
+		}
+	} catch (e) {
+		// Content script not available (chrome:// pages, etc.)
+	}
+	return false;
 }
 
 function resetCountdown(settings) {
-  if (settings.randomEnabled) {
-    const min = Math.max(1, parseInt(settings.randomMin) || 1);
-    const max = Math.max(min + 1, parseInt(settings.randomMax) || min + 1);
-    state.currentInterval = randomBetween(min, max);
-  }
-  state.countdown = state.currentInterval;
+	if (settings.randomEnabled) {
+		const min = Math.max(1, parseInt(settings.randomMin) || 1);
+		const max = Math.max(min + 1, parseInt(settings.randomMax) || min + 1);
+		state.currentInterval = randomBetween(min, max);
+	}
+	state.countdown = state.currentInterval;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -267,54 +267,54 @@ function resetCountdown(settings) {
 // ═══════════════════════════════════════════════════════════
 
 function matchesUrlList(tabUrl, urls, matchMode) {
-  if (!tabUrl) return false;
+	if (!tabUrl) return false;
 
-  try {
-    const tabUrlObj = new URL(tabUrl);
-    const tabDomain = tabUrlObj.hostname.replace(/^www\./, '');
+	try {
+		const tabUrlObj = new URL(tabUrl);
+		const tabDomain = tabUrlObj.hostname.replace(/^www\./, '');
 
-    return urls.some(entry => {
-      try {
-        let entryDomain, entryPath, entrySearch;
+		return urls.some(entry => {
+			try {
+				let entryDomain, entryPath, entrySearch;
 
-        if (entry.includes('://')) {
-          const entryUrl = new URL(entry);
-          entryDomain = entryUrl.hostname.replace(/^www\./, '');
-          entryPath = entryUrl.pathname;
-          entrySearch = entryUrl.search;
-        } else if (entry.includes('/')) {
-          const entryUrl = new URL('https://' + entry);
-          entryDomain = entryUrl.hostname.replace(/^www\./, '');
-          entryPath = entryUrl.pathname;
-          entrySearch = entryUrl.search;
-        } else {
-          // Just a domain name
-          return tabDomain === entry.replace(/^www\./, '');
-        }
+				if (entry.includes('://')) {
+					const entryUrl = new URL(entry);
+					entryDomain = entryUrl.hostname.replace(/^www\./, '');
+					entryPath = entryUrl.pathname;
+					entrySearch = entryUrl.search;
+				} else if (entry.includes('/')) {
+					const entryUrl = new URL('https://' + entry);
+					entryDomain = entryUrl.hostname.replace(/^www\./, '');
+					entryPath = entryUrl.pathname;
+					entrySearch = entryUrl.search;
+				} else {
+					// Just a domain name
+					return tabDomain === entry.replace(/^www\./, '');
+				}
 
-        // Domain must always match
-        if (tabDomain !== entryDomain) return false;
-        if (matchMode === 'domain') return true;
+				// Domain must always match
+				if (tabDomain !== entryDomain) return false;
+				if (matchMode === 'domain') return true;
 
-        // Path match
-        if (matchMode === 'domainPath' || matchMode === 'domainPathQuery') {
-          const tabPath = tabUrlObj.pathname.replace(/\/$/, '') || '';
-          const cleanEntryPath = (entryPath || '').replace(/\/$/, '') || '';
-          if (cleanEntryPath && cleanEntryPath !== '' && tabPath !== cleanEntryPath) return false;
-          if (matchMode === 'domainPath') return true;
+				// Path match
+				if (matchMode === 'domainPath' || matchMode === 'domainPathQuery') {
+					const tabPath = tabUrlObj.pathname.replace(/\/$/, '') || '';
+					const cleanEntryPath = (entryPath || '').replace(/\/$/, '') || '';
+					if (cleanEntryPath && cleanEntryPath !== '' && tabPath !== cleanEntryPath) return false;
+					if (matchMode === 'domainPath') return true;
 
-          // Query match
-          return tabUrlObj.search === (entrySearch || '');
-        }
+					// Query match
+					return tabUrlObj.search === (entrySearch || '');
+				}
 
-        return true;
-      } catch (e) {
-        return false;
-      }
-    });
-  } catch (e) {
-    return false;
-  }
+				return true;
+			} catch (e) {
+				return false;
+			}
+		});
+	} catch (e) {
+		return false;
+	}
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -322,57 +322,57 @@ function matchesUrlList(tabUrl, urls, matchMode) {
 // ═══════════════════════════════════════════════════════════
 
 async function doStart() {
-  const settings = await getSettings();
+	const settings = await getSettings();
 
-  if (settings.randomEnabled) {
-    const min = Math.max(1, parseInt(settings.randomMin) || 1);
-    const max = Math.max(min + 1, parseInt(settings.randomMax) || min + 1);
-    state.currentInterval = randomBetween(min, max);
-  } else {
-    state.currentInterval = settings.interval;
-  }
+	if (settings.randomEnabled) {
+		const min = Math.max(1, parseInt(settings.randomMin) || 1);
+		const max = Math.max(min + 1, parseInt(settings.randomMax) || min + 1);
+		state.currentInterval = randomBetween(min, max);
+	} else {
+		state.currentInterval = settings.interval;
+	}
 
-  state.countdown = state.currentInterval;
-  state.isRunning = true;
-  state.refreshCount = 0;
-  state.pageHashes = {};
+	state.countdown = state.currentInterval;
+	state.isRunning = true;
+	state.refreshCount = 0;
+	state.pageHashes = {};
 
-  startTick();
-  startKeepAlive();
-  updateBadge();
-  persistState();
+	startTick();
+	startKeepAlive();
+	updateBadge();
+	persistState();
 
-  return { success: true, state: getStateSnapshot() };
+	return { success: true, state: getStateSnapshot() };
 }
 
 function doPause() {
-  state.isRunning = false;
-  stopTick();
-  // Keep countdown value for resume
-  updateBadge();
-  persistState();
-  return { success: true, state: getStateSnapshot() };
+	state.isRunning = false;
+	stopTick();
+	// Keep countdown value for resume
+	updateBadge();
+	persistState();
+	return { success: true, state: getStateSnapshot() };
 }
 
 function doResume() {
-  state.isRunning = true;
-  startTick();
-  startKeepAlive();
-  updateBadge();
-  persistState();
-  return { success: true, state: getStateSnapshot() };
+	state.isRunning = true;
+	startTick();
+	startKeepAlive();
+	updateBadge();
+	persistState();
+	return { success: true, state: getStateSnapshot() };
 }
 
 function doStop() {
-  state.isRunning = false;
-  stopTick();
-  stopKeepAlive();
-  state.countdown = 0;
-  state.refreshCount = 0;
-  state.pageHashes = {};
-  updateBadge();
-  persistState();
-  return { success: true, state: getStateSnapshot() };
+	state.isRunning = false;
+	stopTick();
+	stopKeepAlive();
+	state.countdown = 0;
+	state.refreshCount = 0;
+	state.pageHashes = {};
+	updateBadge();
+	persistState();
+	return { success: true, state: getStateSnapshot() };
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -380,14 +380,14 @@ function doStop() {
 // ═══════════════════════════════════════════════════════════
 
 function updateBadge() {
-  if (state.isRunning) {
-    const text = state.countdown > 999 ? '999' : state.countdown.toString();
-    chrome.action.setBadgeText({ text });
-    chrome.action.setBadgeBackgroundColor({ color: '#ffffff' });
-    chrome.action.setBadgeTextColor({ color: '#000000' });
-  } else {
-    chrome.action.setBadgeText({ text: '' });
-  }
+	if (state.isRunning) {
+		const text = state.countdown > 999 ? '999' : state.countdown.toString();
+		chrome.action.setBadgeText({ text });
+		chrome.action.setBadgeBackgroundColor({ color: '#ffffff' });
+		chrome.action.setBadgeTextColor({ color: '#000000' });
+	} else {
+		chrome.action.setBadgeText({ text: '' });
+	}
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -395,19 +395,19 @@ function updateBadge() {
 // ═══════════════════════════════════════════════════════════
 
 function broadcastState() {
-  chrome.runtime.sendMessage({
-    type: 'STATE_UPDATE',
-    state: getStateSnapshot(),
-  }).catch(() => {});
+	chrome.runtime.sendMessage({
+		type: 'STATE_UPDATE',
+		state: getStateSnapshot(),
+	}).catch(() => {});
 }
 
 function getStateSnapshot() {
-  return {
-    isRunning: state.isRunning,
-    countdown: state.countdown,
-    currentInterval: state.currentInterval,
-    refreshCount: state.refreshCount,
-  };
+	return {
+		isRunning: state.isRunning,
+		countdown: state.countdown,
+		currentInterval: state.currentInterval,
+		refreshCount: state.refreshCount,
+	};
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -415,83 +415,84 @@ function getStateSnapshot() {
 // ═══════════════════════════════════════════════════════════
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-  (async () => {
-    try {
-      let result;
+	(async () => {
+		try {
+			let result;
 
-      switch (msg.type) {
-        case 'START':
-          result = await doStart();
-          break;
+			switch (msg.type) {
+				case 'START':
+				result = await doStart();
+				break;
 
-        case 'PAUSE':
-          result = doPause();
-          break;
+				case 'PAUSE':
+				result = doPause();
+				break;
 
-        case 'RESUME':
-          result = doResume();
-          break;
+				case 'RESUME':
+				result = doResume();
+				break;
 
-        case 'STOP':
-          result = doStop();
-          break;
+				case 'STOP':
+				result = doStop();
+				break;
 
-        case 'TOGGLE':
-          if (state.isRunning) {
-            result = doPause();
-          } else {
-            result = await doStart();
-          }
-          break;
+				case 'TOGGLE':
+				if (state.isRunning) {
+					result = doPause();
+				} else {
+					result = await doStart();
+				}
+				break;
 
-        case 'GET_STATE':
-          result = { state: getStateSnapshot() };
-          break;
+				case 'GET_STATE':
+				result = { state: getStateSnapshot() };
+				break;
 
-        case 'UPDATE_SETTINGS': {
-          const current = await getSettings();
-          const merged = { ...current, ...msg.settings };
-          await saveSettings(merged);
+				case 'UPDATE_SETTINGS': {
+					const current = await getSettings();
+					const merged = { ...current, ...msg.settings };
+					await saveSettings(merged);
 
-          // Update interval if not currently running
-          if (!state.isRunning) {
-            if (merged.randomEnabled) {
-              const min = Math.max(1, parseInt(merged.randomMin) || 1);
-              const max = Math.max(min + 1, parseInt(merged.randomMax) || min + 1);
-              state.currentInterval = randomBetween(min, max);
-            } else {
-              state.currentInterval = merged.interval;
-            }
-            state.countdown = state.currentInterval;
-          }
+					// Update interval if not currently running
+					if (!state.isRunning) {
+						if (merged.randomEnabled) {
+							const min = Math.max(1, parseInt(merged.randomMin) || 1);
+							const max = Math.max(min + 1, parseInt(merged.randomMax) || min + 1);
+							state.currentInterval = randomBetween(min, max);
+						} else {
+							state.currentInterval = merged.interval;
+						}
 
-          result = { success: true };
-          break;
-        }
+						state.countdown = state.currentInterval;
+					}
 
-        case 'GET_LOGS': {
-          const logs = await getLogs();
-          result = { logs };
-          break;
-        }
+					result = { success: true };
+					break;
+				}
 
-        case 'CLEAR_LOGS':
-          await clearLogs();
-          result = { success: true };
-          break;
+				case 'GET_LOGS': {
+					const logs = await getLogs();
+					result = { logs };
+					break;
+				}
 
-        default:
-          result = { error: 'Unknown message type' };
-      }
+				case 'CLEAR_LOGS':
+					await clearLogs();
+					result = { success: true };
+					break;
 
-      sendResponse(result);
-    } catch (e) {
-      console.error('Auto Refresh: Message handler error:', e);
-      sendResponse({ error: e.message });
-    }
-  })();
+				default:
+					result = { error: 'Unknown message type' };
+			}
 
-  return true; // Async response
+			sendResponse(result);
+		} catch (e) {
+			console.error('Auto Refresh: Message handler error:', e);
+			sendResponse({ error: e.message });
+		}
+	})();
+
+	return true; // Async response
 });
 
 // ═══════════════════════════════════════════════════════════
@@ -499,14 +500,15 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 // ═══════════════════════════════════════════════════════════
 
 chrome.commands.onCommand.addListener(async (command) => {
-  if (command === 'toggle-refresh') {
-    if (state.isRunning) {
-      doPause();
-    } else {
-      await doStart();
-    }
-    broadcastState();
-  }
+	if (command === 'toggle-refresh') {
+		if (state.isRunning) {
+			doPause();
+		} else {
+			await doStart();
+		}
+
+		broadcastState();
+	}
 });
 
 // ═══════════════════════════════════════════════════════════
@@ -514,15 +516,15 @@ chrome.commands.onCommand.addListener(async (command) => {
 // ═══════════════════════════════════════════════════════════
 
 function randomBetween(min, max) {
-  min = Math.max(1, parseInt(min) || 1);
-  max = Math.max(min, parseInt(max) || min);
-  return Math.floor(Math.random() * (max - min + 1)) + min;
+	min = Math.max(1, parseInt(min) || 1);
+	max = Math.max(min, parseInt(max) || min);
+	return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
 function safeNotify(id, options) {
-  try {
-    chrome.notifications.create(id, options);
-  } catch (e) {
-    console.warn('Auto Refresh: Notification failed:', e);
-  }
+	try {
+		chrome.notifications.create(id, options);
+	} catch (e) {
+		console.warn('Auto Refresh: Notification failed:', e);
+  	}
 }

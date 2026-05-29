@@ -379,9 +379,43 @@ function doStop() {
 // BADGE
 // ═══════════════════════════════════════════════════════════
 
+function pad(num, digits = 2) { return String(num).padStart(digits, '0'); }
+
+function formatSeconds(seconds, format = 'auto') {
+	if (typeof seconds !== 'number' || isNaN(seconds) || seconds < 0) seconds = 0;
+	seconds = Math.floor(seconds);
+	if (format === 'auto') {
+		switch (true) {
+			case seconds >= 6000: // 99*60+59
+				format = 'hhmm'
+				break;
+			case seconds >= 1000:
+				format = 'mmss'
+				break;
+			default:
+				format = 'ss'
+				break;
+		}
+	}
+	switch (format) {
+		case 'hhmm':
+			const hours = Math.floor(seconds / 3600);
+			const minutes = Math.floor((seconds % 3600) / 60);
+			return `${pad(hours)}:${pad(minutes)}`;
+		case 'mmss':
+			const totalMinutes = Math.floor(seconds / 60);
+			const remainingSeconds = seconds % 60;
+			return `${pad(totalMinutes)}:${pad(remainingSeconds)}`;
+		case 'ss':
+			return `${seconds}`;
+		default:
+			return formatSeconds(seconds, 'auto');
+	}
+}
+
 function updateBadge() {
 	if (state.isRunning) {
-		const text = state.countdown > 999 ? '999' : state.countdown.toString();
+		const text = formatSeconds(state.countdown); // state.countdown > 999 ? '999' : state.countdown.toString();
 		chrome.action.setBadgeText({ text });
 		chrome.action.setBadgeBackgroundColor({ color: '#ffffff' });
 		chrome.action.setBadgeTextColor({ color: '#000000' });

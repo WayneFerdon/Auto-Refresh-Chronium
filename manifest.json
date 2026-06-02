@@ -10,7 +10,9 @@
     "browsingData",
     "notifications",
     "activeTab",
-    "scripting"
+    "scripting",
+    "webNavigation",
+    "webRequest"
   ],
   "action": {
     "default_popup": "popup/popup.html",

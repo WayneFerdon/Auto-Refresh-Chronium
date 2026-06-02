@@ -1,3 +1,13 @@
+<!--
+ * @Author: WayneFerdon wayneferdon@hotmail.com
+ * @Date: 2026-05-29 16:46:01
+ * @LastEditors: WayneFerdon wayneferdon@hotmail.com
+ * @LastEditTime: 2026-06-03 01:29:40
+ * @FilePath: \Auto-Refresh-Chronium\popup\popup.html
+ * ----------------------------------------------------------------
+ * Licensed to the .NET Foundation under one or more agreements.
+ * The .NET Foundation licenses this file to you under the MIT license.
+-->
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
@@ -44,6 +54,12 @@
           <polygon points="13 2 3 14 12 14 11 22 21 10 12 10"/>
         </svg>
         <span data-i18n="main">Main</span>
+      </button>
+      <button class="tab" data-tab="onError" id="tabOnError">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10"/>
+        </svg>
+        <span data-i18n="onError">On Error</span>
       </button>
       <button class="tab" data-tab="advanced" id="tabAdvanced">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -121,8 +137,67 @@
         </div>
       </div>
 
+      <!-- ─── ON ERROR TAB ─── -->
+      <div class="tab-panel" id="panelOnError">
+        
+        <!-- Reload On Error -->
+        <div class="setting-item">
+          <div class="setting-header">
+            <div class="setting-info">
+              <span class="setting-label" data-i18n="reloadOnError">Reload On Error</span>
+              <span class="setting-desc" data-i18n="reloadOnErrorDesc">Reload On Page Load Error</span>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="onErrorToggle">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="setting-body" id="onErrorBody">
+            <div class="range-inputs">
+              <div class="range-input-group">
+                <label data-i18n="refreshInterval">Refresh Interval</label>
+                <input type="number" id="onErrorInterval" class="input-number-sm" value="5" min="1" max="86400">
+                <span data-i18n="sec">sec</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- URL List -->
+        <div class="section url-section" id="onErrorUrlSection">
+          <div class="section-header">
+            <label class="section-label" data-i18n="urlList">URL List</label>
+            <select class="match-select" id="onErrorMatchModeSelect">
+              <option value="domain" data-i18n="domainOnly">Domain only</option>
+              <option value="domainPath" data-i18n="domainPath">Domain + Path</option>
+              <option value="domainPathQuery" data-i18n="domainPathQuery">Full URL</option>
+            </select>
+          </div>
+          <div class="url-input-group">
+            <input type="text" id="onErrorUrlInput" class="input-text" data-i18n-placeholder="urlPlaceholder" placeholder="Enter domain or URL...">
+            <button class="btn-add" id="onErrorAddUrlBtn" data-i18n="addUrl">Add</button>
+          </div>
+          <div class="url-list" id="onErrorUrlList">
+            <div class="empty-state" id="onErrorUrlEmptyState" data-i18n="noUrls">No URLs added. Active tab will be refreshed.</div>
+          </div>
+        </div>
+      </div>
+
       <!-- ─── ADVANCED TAB ─── -->
       <div class="tab-panel" id="panelAdvanced">
+        <!-- On Launch -->
+        <div class="setting-item">
+          <div class="setting-header">
+            <div class="setting-info">
+              <span class="setting-label" data-i18n="onLaunch">On Launch</span>
+              <span class="setting-desc" data-i18n="onLaunchDesc">Auto start on browser launch</span>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="onLaunchToggle">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
 
         <!-- Random Interval -->
         <div class="setting-item">

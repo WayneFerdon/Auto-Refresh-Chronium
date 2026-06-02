@@ -673,6 +673,25 @@ input[type="number"]::-webkit-outer-spin-button {
   color: var(--error);
 }
 
+.onerror-url-item-remove {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+.onerror-url-item-remove:hover {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--error);
+}
+
 .empty-state {
   padding: 16px;
   text-align: center;

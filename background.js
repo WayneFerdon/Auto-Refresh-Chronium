@@ -1,3 +1,13 @@
+/*
+ * @Author: WayneFerdon wayneferdon@hotmail.com
+ * @Date: 2026-05-29 16:46:01
+ * @LastEditors: WayneFerdon wayneferdon@hotmail.com
+ * @LastEditTime: 2026-06-03 01:27:39
+ * @FilePath: \Auto-Refresh-Chronium\background.js
+ * ----------------------------------------------------------------
+ * Licensed to the .NET Foundation under one or more agreements.
+ * The .NET Foundation licenses this file to you under the MIT license.
+ */
 // Auto Refresh Pro — Background Service Worker
 // Core engine: timers, tab refresh, badge, URL matching, page change detection
 
@@ -192,7 +202,7 @@ async function performRefresh() {
 	resetCountdown(settings);
 }
 
-	async function getTargetTabs(settings) {
+async function getTargetTabs(settings) {
 	let tabs = [];
 
 	try {
@@ -562,3 +572,76 @@ function safeNotify(id, options) {
 		console.warn('Auto Refresh: Notification failed:', e);
   	}
 }
+
+chrome.webRequest.onErrorOccurred.addListener(handleError, { urls: ["<all_urls>"] });
+chrome.webNavigation.onErrorOccurred.addListener(handleError);
+
+async function handleError(details) { 
+	let settings = await getSettings();
+	if (!settings.onErrorEnabled) return;
+	if (details.frameId !== 0) return;
+	let waited = 0;
+	while (waited < settings.onErrorInterval) { 
+		await new Promise(resolve => setTimeout(resolve, 1000));
+		settings = await getSettings();
+		waited++;
+	}
+	if (!settings.onErrorEnabled) return;
+	const tabs = await getOnErrorTargetTabs(settings);
+	for (const tab of tabs) {
+		if (tab?.id !== details.tabId) continue;
+		try {
+			// Hard refresh: clear origin cache first
+			if (settings.hardRefresh) {
+				try {
+					const origin = new URL(tab.url).origin;
+					await chrome.browsingData.remove({ origins: [origin] }, { cache: true });
+				} catch (e) {
+					// Silently continue
+				}
+			}
+
+			// Reload the tab
+			await chrome.tabs.reload(tab.id, { bypassCache: settings.hardRefresh });
+
+			await addLog({
+				type: 'refresh',
+				tabId: tab.id,
+				url: tab.url,
+				title: tab.title || 'Untitled',
+			});
+		} catch (e) {
+			console.error('Auto Refresh: Failed to refresh tab', tab.id, e);
+		}
+	}
+}
+
+async function getOnErrorTargetTabs(settings) {
+	let tabs = [];
+
+	try {
+		if (settings.onErrorUrls && settings.onErrorUrls.length > 0) {
+			tabs = await chrome.tabs.query({});
+			tabs = tabs.filter(tab => matchesUrlList(tab.url, settings.onErrorUrls, settings.onErrorMatchMode));
+		} else {
+			const activeTabs = await chrome.tabs.query({ active: true, currentWindow: true });
+			if (activeTabs.length > 0) tabs = activeTabs;
+		}
+	} catch (e) {
+		console.error('Auto Refresh On Error: Failed to query tabs:', e);
+	}
+
+	// Filter out non-web pages
+	return tabs.filter(tab =>
+		tab.url &&
+		(tab.url.startsWith('http://') || tab.url.startsWith('https://'))
+	);
+}
+
+async function onLaunch() {
+	const settings = await getSettings();
+	if (!settings.onLaunch) return;
+	doStart();
+}
+
+onLaunch();

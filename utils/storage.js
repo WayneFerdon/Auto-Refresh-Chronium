@@ -1,3 +1,13 @@
+/*
+ * @Author: WayneFerdon wayneferdon@hotmail.com
+ * @Date: 2026-05-29 16:46:01
+ * @LastEditors: WayneFerdon wayneferdon@hotmail.com
+ * @LastEditTime: 2026-06-03 01:33:21
+ * @FilePath: \Auto-Refresh-Chronium\utils\storage.js
+ * ----------------------------------------------------------------
+ * Licensed to the .NET Foundation under one or more agreements.
+ * The .NET Foundation licenses this file to you under the MIT license.
+ */
 // Auto Refresh Pro — Storage Utilities
 // Wraps chrome.storage.local (persistent) and chrome.storage.session (ephemeral logs)
 
@@ -5,6 +15,11 @@ export const DEFAULT_SETTINGS = {
   interval: 10,
   urls: [],
   matchMode: 'domain', // 'domain' | 'domainPath' | 'domainPathQuery'
+  onErrorEnabled: false,
+  onErrorInterval: 60,
+  onErrorUrls: [],
+  onErrorMatchMode: 'domain', // 'domain' | 'domainPath' | 'domainPathQuery'
+  onLaunch: false,
   randomEnabled: false,
   randomMin: 5,
   randomMax: 15,

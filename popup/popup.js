@@ -1,3 +1,13 @@
+/*
+ * @Author: WayneFerdon wayneferdon@hotmail.com
+ * @Date: 2026-05-29 16:46:01
+ * @LastEditors: WayneFerdon wayneferdon@hotmail.com
+ * @LastEditTime: 2026-06-03 01:31:56
+ * @FilePath: \Auto-Refresh-Chronium\popup\popup.js
+ * ----------------------------------------------------------------
+ * Licensed to the .NET Foundation under one or more agreements.
+ * The .NET Foundation licenses this file to you under the MIT license.
+ */
 // Auto Refresh Pro — Popup Controller
 // Manages all UI interactions, settings sync, and real-time state updates
 
@@ -31,7 +41,19 @@ const urlEmptyState = $('#urlEmptyState');
 const urlSection = $('#urlSection');
 const matchModeSelect = $('#matchModeSelect');
 
+// OnError Tab
+const onErrorToggle = $('#onErrorToggle');
+const onErrorBody = $('#onErrorBody');
+const onErrorInterval = $('#onErrorInterval');
+const onErrorUrlInput = $('#onErrorUrlInput');
+const onErrorAddUrlBtn = $('#onErrorAddUrlBtn');
+const onErrorUrlList = $('#onErrorUrlList');
+const onErrorUrlEmptyState = $('#onErrorUrlEmptyState');
+const onErrorUrlSection = $('#onErrorUrlSection');
+const onErrorMatchModeSelect = $('#onErrorMatchModeSelect');
+
 // Advanced Tab
+const onLaunchToggle = $('#onLaunchToggle');
 const randomToggle = $('#randomToggle');
 const randomBody = $('#randomBody');
 const randomMin = $('#randomMin');
@@ -155,6 +177,10 @@ function populateSettings() {
   langSelect.value = settings.language;
   matchModeSelect.value = settings.matchMode;
 
+  onErrorToggle.checked = settings.onErrorEnabled;
+  onErrorInterval.value = settings.onErrorInterval;
+  toggleSettingBody(onErrorBody, true);
+  
   // Advanced toggles
   randomToggle.checked = settings.randomEnabled;
   randomMin.value = settings.randomMin;
@@ -162,6 +188,7 @@ function populateSettings() {
   toggleSettingBody(randomBody, settings.randomEnabled);
 
   hardRefreshToggle.checked = settings.hardRefresh;
+  onLaunchToggle.checked = settings.onLaunch;
 
   allTabsToggle.checked = settings.allTabs;
   urlSection.classList.toggle('disabled', settings.allTabs);
@@ -181,6 +208,9 @@ function populateSettings() {
 
   // URL list
   renderUrlList();
+
+  // On Error URL list
+  renderOnErrorUrlList();
 
   // Interval disabled when random is on
   if (settings.randomEnabled) {
@@ -230,8 +260,37 @@ function setupEventListeners() {
     settings.matchMode = e.target.value;
     saveAndUpdate();
   });
+  
+  onErrorAddUrlBtn.addEventListener('click', onErrorAddUrl);
+  onErrorUrlInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') onErrorAddUrl();
+  });
+
+  matchModeSelect.addEventListener('change', (e) => {
+    settings.matchMode = e.target.value;
+    saveAndUpdate();
+  });
+
+  // --- On Error toggles ---
+
+  onErrorToggle.addEventListener('change', (e) => {
+    settings.onErrorEnabled = e.target.checked;
+    intervalSection.classList.toggle('disabled', e.target.checked);
+    saveAndUpdate();
+  });
+
+  onErrorInterval.addEventListener('change', (e) => {
+    settings.onErrorInterval = Math.max(1, parseInt(e.target.value) || 1);
+    saveAndUpdate();
+  });
 
   // --- Advanced toggles ---
+
+  onLaunchToggle.addEventListener('change', (e) => {
+    settings.onLaunch = e.target.checked;
+    saveAndUpdate();
+  });
+  
   randomToggle.addEventListener('change', (e) => {
     settings.randomEnabled = e.target.checked;
     toggleSettingBody(randomBody, e.target.checked);
@@ -429,6 +488,57 @@ function renderUrlList() {
 }
 
 // ═══════════════════════════════════════════════════════════
+// ON ERROR URL LIST
+// ═══════════════════════════════════════════════════════════
+
+function onErrorAddUrl() {
+  const url = onErrorUrlInput.value.trim();
+  console.log(url)
+  if (!url) return;
+
+  if (settings.onErrorUrls.includes(url)) {
+    showToast(t('urlExists'));
+    return;
+  }
+
+  settings.onErrorUrls.push(url);
+  onErrorUrlInput.value = '';
+  renderOnErrorUrlList();
+  saveAndUpdate();
+}
+
+function removeOnErrorUrl(index) {
+  settings.onErrorUrls.splice(index, 1);
+  renderOnErrorUrlList();
+  saveAndUpdate();
+}
+
+function renderOnErrorUrlList() {
+  if (!settings.onErrorUrls || settings.onErrorUrls.length === 0) {
+    onErrorUrlList.innerHTML = `<div class="empty-state" data-i18n="noUrls">${t('noUrls')}</div>`;
+    return;
+  }
+
+  onErrorUrlList.innerHTML = settings.onErrorUrls.map((url, i) => `
+    <div class="url-item" data-index="${i}">
+      <span class="url-item-text" title="${escapeHtml(url)}">${escapeHtml(url)}</span>
+      <button class="onerror-url-item-remove" data-index="${i}" title="${t('removeUrl')}">
+        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+  `).join('');
+
+  // Bind remove buttons
+  onErrorUrlList.querySelectorAll('.onerror-url-item-remove').forEach(btn => {
+    btn.addEventListener('click', () => removeOnErrorUrl(parseInt(btn.dataset.index)));
+  });
+}
+
+
+// ═══════════════════════════════════════════════════════════
 // KEYBOARD SHORTCUT CAPTURE
 // ═══════════════════════════════════════════════════════════
 
@@ -531,6 +641,7 @@ async function doImport(e) {
     await loadLocale(settings.language);
     applyTranslations();
     renderUrlList();
+    renderOnErrorUrlList();
 
     showToast(t('importSuccess'));
   } catch (err) {

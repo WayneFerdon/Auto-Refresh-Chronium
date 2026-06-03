@@ -2,7 +2,7 @@
  * @Author: WayneFerdon wayneferdon@hotmail.com
  * @Date: 2026-05-29 16:46:01
  * @LastEditors: WayneFerdon wayneferdon@hotmail.com
- * @LastEditTime: 2026-06-03 01:31:56
+ * @LastEditTime: 2026-06-04 00:00:31
  * @FilePath: \Auto-Refresh-Chronium\popup\popup.js
  * ----------------------------------------------------------------
  * Licensed to the .NET Foundation under one or more agreements.
@@ -51,6 +51,15 @@ const onErrorUrlList = $('#onErrorUrlList');
 const onErrorUrlEmptyState = $('#onErrorUrlEmptyState');
 const onErrorUrlSection = $('#onErrorUrlSection');
 const onErrorMatchModeSelect = $('#onErrorMatchModeSelect');
+
+// Focus Emulation Tab
+const focusEmulationToggle = $('#focusEmulationToggle');
+const focusEmulationUrlInput = $('#focusEmulationUrlInput');
+const focusEmulationAddUrlBtn = $('#focusEmulationAddUrlBtn');
+const focusEmulationUrlList = $('#focusEmulationUrlList');
+const focusEmulationUrlEmptyState = $('#focusEmulationUrlEmptyState');
+const focusEmulationUrlSection = $('#focusEmulationUrlSection');
+const focusEmulationMatchModeSelect = $('#focusEmulationMatchModeSelect');
 
 // Advanced Tab
 const onLaunchToggle = $('#onLaunchToggle');
@@ -177,9 +186,13 @@ function populateSettings() {
   langSelect.value = settings.language;
   matchModeSelect.value = settings.matchMode;
 
+  // On error
   onErrorToggle.checked = settings.onErrorEnabled;
   onErrorInterval.value = settings.onErrorInterval;
   toggleSettingBody(onErrorBody, true);
+
+  // Focus emulation
+  focusEmulationToggle.checked = settings.focusEmulationEnabled;
   
   // Advanced toggles
   randomToggle.checked = settings.randomEnabled;
@@ -211,6 +224,9 @@ function populateSettings() {
 
   // On Error URL list
   renderOnErrorUrlList();
+  
+  // Focus Emulation URL list
+  renderFocusEmulationUrlList();
 
   // Interval disabled when random is on
   if (settings.randomEnabled) {
@@ -261,17 +277,7 @@ function setupEventListeners() {
     saveAndUpdate();
   });
   
-  onErrorAddUrlBtn.addEventListener('click', onErrorAddUrl);
-  onErrorUrlInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') onErrorAddUrl();
-  });
-
-  matchModeSelect.addEventListener('change', (e) => {
-    settings.matchMode = e.target.value;
-    saveAndUpdate();
-  });
-
-  // --- On Error toggles ---
+  // --- On Error Tab ---
 
   onErrorToggle.addEventListener('change', (e) => {
     settings.onErrorEnabled = e.target.checked;
@@ -281,6 +287,34 @@ function setupEventListeners() {
 
   onErrorInterval.addEventListener('change', (e) => {
     settings.onErrorInterval = Math.max(1, parseInt(e.target.value) || 1);
+    saveAndUpdate();
+  });
+
+  onErrorAddUrlBtn.addEventListener('click', onErrorAddUrl);
+  onErrorUrlInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') onErrorAddUrl();
+  });
+
+  onErrorMatchModeSelect.addEventListener('change', (e) => {
+    settings.onErrorMatchMode = e.target.value;
+    saveAndUpdate();
+  });
+
+  // --- Focus Emulation Tab ---
+
+  focusEmulationToggle.addEventListener('change', (e) => {
+    settings.focusEmulationEnabled = e.target.checked;
+    intervalSection.classList.toggle('disabled', e.target.checked);
+    saveAndUpdate();
+  });
+
+  focusEmulationAddUrlBtn.addEventListener('click', focusEmulationAddUrl);
+  focusEmulationUrlInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') focusEmulationAddUrl();
+  });
+
+  focusEmulationMatchModeSelect.addEventListener('change', (e) => {
+    settings.focusEmulationMatchMode = e.target.value;
     saveAndUpdate();
   });
 
@@ -539,6 +573,57 @@ function renderOnErrorUrlList() {
 
 
 // ═══════════════════════════════════════════════════════════
+// Focus Emulation URL LIST
+// ═══════════════════════════════════════════════════════════
+
+function focusEmulationAddUrl() {
+  const url = focusEmulationUrlInput.value.trim();
+  console.log(url)
+  if (!url) return;
+
+  if (settings.focusEmulationUrls.includes(url)) {
+    showToast(t('urlExists'));
+    return;
+  }
+
+  settings.focusEmulationUrls.push(url);
+  focusEmulationUrlInput.value = '';
+  renderFocusEmulationUrlList();
+  saveAndUpdate();
+}
+
+function removeFocusEmulationUrl(index) {
+  settings.focusEmulationUrls.splice(index, 1);
+  renderFocusEmulationUrlList();
+  saveAndUpdate();
+}
+
+function renderFocusEmulationUrlList() {
+  if (!settings.focusEmulationUrls || settings.focusEmulationUrls.length === 0) {
+    focusEmulationUrlList.innerHTML = `<div class="empty-state" data-i18n="noUrls">${t('noUrls')}</div>`;
+    return;
+  }
+
+  focusEmulationUrlList.innerHTML = settings.focusEmulationUrls.map((url, i) => `
+    <div class="url-item" data-index="${i}">
+      <span class="url-item-text" title="${escapeHtml(url)}">${escapeHtml(url)}</span>
+      <button class="focusemulation-url-item-remove" data-index="${i}" title="${t('removeUrl')}">
+        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+  `).join('');
+
+  // Bind remove buttons
+  focusEmulationUrlList.querySelectorAll('.focusemulation-url-item-remove').forEach(btn => {
+    btn.addEventListener('click', () => removeFocusEmulationUrl(parseInt(btn.dataset.index)));
+  });
+}
+
+
+// ═══════════════════════════════════════════════════════════
 // KEYBOARD SHORTCUT CAPTURE
 // ═══════════════════════════════════════════════════════════
 
@@ -642,6 +727,7 @@ async function doImport(e) {
     applyTranslations();
     renderUrlList();
     renderOnErrorUrlList();
+    renderFocusEmulationUrlList();
 
     showToast(t('importSuccess'));
   } catch (err) {

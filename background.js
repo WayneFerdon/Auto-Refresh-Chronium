@@ -2,7 +2,7 @@
  * @Author: WayneFerdon wayneferdon@hotmail.com
  * @Date: 2026-05-29 16:46:01
  * @LastEditors: WayneFerdon wayneferdon@hotmail.com
- * @LastEditTime: 2026-06-03 01:27:39
+ * @LastEditTime: 2026-06-04 00:08:05
  * @FilePath: \Auto-Refresh-Chronium\background.js
  * ----------------------------------------------------------------
  * Licensed to the .NET Foundation under one or more agreements.
@@ -111,7 +111,7 @@ async function tick() {
 	}
 
 	// Persist for recovery
-  	persistState();
+	persistState();
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -119,11 +119,11 @@ async function tick() {
 // ═══════════════════════════════════════════════════════════
 
 function startKeepAlive() {
-  	chrome.alarms.create('keepAlive', { periodInMinutes: 0.4 });
+	chrome.alarms.create('keepAlive', { periodInMinutes: 0.4 });
 }
 
 function stopKeepAlive() {
-  	chrome.alarms.clear('keepAlive');
+	chrome.alarms.clear('keepAlive');
 }
 
 chrome.alarms.onAlarm.addListener((alarm) => {
@@ -227,7 +227,7 @@ async function getTargetTabs(settings) {
 }
 
 async function checkPageChange(tab, settings) {
-  	try {
+	try {
 		const response = await chrome.tabs.sendMessage(tab.id, { type: 'GET_PAGE_HASH' });
 		if (response && response.hash) {
 			const prevHash = state.pageHashes[tab.id];
@@ -442,7 +442,7 @@ function broadcastState() {
 	chrome.runtime.sendMessage({
 		type: 'STATE_UPDATE',
 		state: getStateSnapshot(),
-	}).catch(() => {});
+	}).catch(() => { });
 }
 
 function getStateSnapshot() {
@@ -465,32 +465,32 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
 			switch (msg.type) {
 				case 'START':
-				result = await doStart();
-				break;
+					result = await doStart();
+					break;
 
 				case 'PAUSE':
-				result = doPause();
-				break;
+					result = doPause();
+					break;
 
 				case 'RESUME':
-				result = doResume();
-				break;
+					result = doResume();
+					break;
 
 				case 'STOP':
-				result = doStop();
-				break;
+					result = doStop();
+					break;
 
 				case 'TOGGLE':
-				if (state.isRunning) {
-					result = doPause();
-				} else {
-					result = await doStart();
-				}
-				break;
+					if (state.isRunning) {
+						result = doPause();
+					} else {
+						result = await doStart();
+					}
+					break;
 
 				case 'GET_STATE':
-				result = { state: getStateSnapshot() };
-				break;
+					result = { state: getStateSnapshot() };
+					break;
 
 				case 'UPDATE_SETTINGS': {
 					const current = await getSettings();
@@ -570,18 +570,18 @@ function safeNotify(id, options) {
 		chrome.notifications.create(id, options);
 	} catch (e) {
 		console.warn('Auto Refresh: Notification failed:', e);
-  	}
+	}
 }
 
 chrome.webRequest.onErrorOccurred.addListener(handleError, { urls: ["<all_urls>"] });
 chrome.webNavigation.onErrorOccurred.addListener(handleError);
 
-async function handleError(details) { 
+async function handleError(details) {
 	let settings = await getSettings();
 	if (!settings.onErrorEnabled) return;
 	if (details.frameId !== 0) return;
 	let waited = 0;
-	while (waited < settings.onErrorInterval) { 
+	while (waited < settings.onErrorInterval) {
 		await new Promise(resolve => setTimeout(resolve, 1000));
 		settings = await getSettings();
 		waited++;
@@ -645,3 +645,69 @@ async function onLaunch() {
 }
 
 onLaunch();
+
+const activeTabs = new Set();
+
+async function enableFocusEmulationForTab(tabId) {
+	if (activeTabs.has(tabId)) return;
+	let settings = await getSettings();
+	const tabs = await getFocusEmulationTargetTabs(settings);
+	let tab;
+	if (!(tab = tabs.find(tab => tab.id === tabId))) return;
+
+    try {
+        await chrome.debugger.attach({ tabId: tabId }, "1.3");
+        await chrome.debugger.sendCommand({ tabId: tabId }, "Emulation.setFocusEmulationEnabled", { enabled: true });
+        activeTabs.add(tabId);
+    } catch (error) {
+        console.warn(`Tab ${tabId}-${tab.title} Failed Focus Emulation: ${error.message}`);
+    }
+}
+
+chrome.tabs.onCreated.addListener((tab) => {
+    enableFocusEmulationForTab(tab.id);
+});
+
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+    if (changeInfo.status === 'complete') {
+        enableFocusEmulationForTab(tabId);
+    }
+});
+
+async function enableForAllTabs() {
+    const tabs = await chrome.tabs.query({});
+    for (const tab of tabs) {
+        enableFocusEmulationForTab(tab.id);
+    }
+}
+
+chrome.debugger.onDetach.addListener((source, reason) => {
+    if (source.tabId) {
+        activeTabs.delete(source.tabId);
+        console.log(`Tab ${source.tabId} DevTool has detached by: ${reason}`);
+    }
+});
+
+async function getFocusEmulationTargetTabs(settings) {
+	let tabs = [];
+
+	try {
+		if (settings.focusEmulationUrls && settings.focusEmulationUrls.length > 0) {
+			tabs = await chrome.tabs.query({});
+			tabs = tabs.filter(tab => matchesUrlList(tab.url, settings.focusEmulationUrls, settings.focusEmulationMatchMode));
+		} else {
+			const activeTabs = await chrome.tabs.query({ active: true, currentWindow: true });
+			if (activeTabs.length > 0) tabs = activeTabs;
+		}
+	} catch (e) {
+		console.error('Auto Refresh Focus Emulation: Failed to query tabs:', e);
+	}
+
+	return tabs.filter(tab =>
+		tab.url &&
+		(tab.url.startsWith('http://') || tab.url.startsWith('https://'))
+	);
+}
+
+chrome.runtime.onInstalled.addListener(enableForAllTabs);
+chrome.runtime.onStartup.addListener(enableForAllTabs);

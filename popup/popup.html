@@ -2,7 +2,7 @@
  * @Author: WayneFerdon wayneferdon@hotmail.com
  * @Date: 2026-05-29 16:46:01
  * @LastEditors: WayneFerdon wayneferdon@hotmail.com
- * @LastEditTime: 2026-06-03 01:29:40
+ * @LastEditTime: 2026-06-03 23:54:32
  * @FilePath: \Auto-Refresh-Chronium\popup\popup.html
  * ----------------------------------------------------------------
  * Licensed to the .NET Foundation under one or more agreements.
@@ -60,6 +60,12 @@
           <polygon points="13 2 3 14 12 14 11 22 21 10 12 10"/>
         </svg>
         <span data-i18n="onError">On Error</span>
+      </button>
+      <button class="tab" data-tab="focusEmulation" id="tabFocusEmulation">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10"/>
+        </svg>
+        <span data-i18n="focusEmulation">Focus</span>
       </button>
       <button class="tab" data-tab="advanced" id="tabAdvanced">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -179,6 +185,43 @@
           </div>
           <div class="url-list" id="onErrorUrlList">
             <div class="empty-state" id="onErrorUrlEmptyState" data-i18n="noUrls">No URLs added. Active tab will be refreshed.</div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- ─── Focus Emulation TAB ─── -->
+      <div class="tab-panel" id="panelFocusEmulation">
+        
+        <!-- Focus Emulation -->
+        <div class="setting-item">
+          <div class="setting-header">
+            <div class="setting-info">
+              <span class="setting-label" data-i18n="focusEmulation">Focus Emulation</span>
+              <span class="setting-desc" data-i18n="focusEmulation">Focus Emulation To Keep Tab Alive</span>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="focusEmulationToggle">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- URL List -->
+        <div class="section url-section" id="focusEmulationUrlSection">
+          <div class="section-header">
+            <label class="section-label" data-i18n="urlList">URL List</label>
+            <select class="match-select" id="focusEmulationMatchModeSelect">
+              <option value="domain" data-i18n="domainOnly">Domain only</option>
+              <option value="domainPath" data-i18n="domainPath">Domain + Path</option>
+              <option value="domainPathQuery" data-i18n="domainPathQuery">Full URL</option>
+            </select>
+          </div>
+          <div class="url-input-group">
+            <input type="text" id="focusEmulationUrlInput" class="input-text" data-i18n-placeholder="urlPlaceholder" placeholder="Enter domain or URL...">
+            <button class="btn-add" id="focusEmulationAddUrlBtn" data-i18n="addUrl">Add</button>
+          </div>
+          <div class="url-list" id="focusEmulationUrlList">
+            <div class="empty-state" id="focusEmulationUrlEmptyState" data-i18n="noUrls">No URLs added. Active tab will be refreshed.</div>
           </div>
         </div>
       </div>

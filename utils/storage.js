@@ -2,7 +2,7 @@
  * @Author: WayneFerdon wayneferdon@hotmail.com
  * @Date: 2026-05-29 16:46:01
  * @LastEditors: WayneFerdon wayneferdon@hotmail.com
- * @LastEditTime: 2026-06-03 01:33:21
+ * @LastEditTime: 2026-06-04 00:01:22
  * @FilePath: \Auto-Refresh-Chronium\utils\storage.js
  * ----------------------------------------------------------------
  * Licensed to the .NET Foundation under one or more agreements.
@@ -19,6 +19,9 @@ export const DEFAULT_SETTINGS = {
   onErrorInterval: 60,
   onErrorUrls: [],
   onErrorMatchMode: 'domain', // 'domain' | 'domainPath' | 'domainPathQuery'
+  focusEmulationEnabled: false,
+  focusEmulationUrls: [],
+  focusEmulationMatchMode: 'domain', // 'domain' | 'domainPath' | 'domainPathQuery'
   onLaunch: false,
   randomEnabled: false,
   randomMin: 5,

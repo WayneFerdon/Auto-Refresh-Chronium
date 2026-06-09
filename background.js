@@ -2,7 +2,7 @@
  * @Author: WayneFerdon wayneferdon@hotmail.com
  * @Date: 2026-05-29 16:46:01
  * @LastEditors: WayneFerdon wayneferdon@hotmail.com
- * @LastEditTime: 2026-06-04 00:08:05
+ * @LastEditTime: 2026-06-10 02:02:18
  * @FilePath: \Auto-Refresh-Chronium\background.js
  * ----------------------------------------------------------------
  * Licensed to the .NET Foundation under one or more agreements.
@@ -651,6 +651,7 @@ const activeTabs = new Set();
 async function enableFocusEmulationForTab(tabId) {
 	if (activeTabs.has(tabId)) return;
 	let settings = await getSettings();
+	if (!settings.focusEmulationEnabled) return;
 	const tabs = await getFocusEmulationTargetTabs(settings);
 	let tab;
 	if (!(tab = tabs.find(tab => tab.id === tabId))) return;

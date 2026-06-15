@@ -39,7 +39,6 @@ const addUrlBtn = $('#addUrlBtn');
 const urlList = $('#urlList');
 const urlEmptyState = $('#urlEmptyState');
 const urlSection = $('#urlSection');
-const matchModeSelect = $('#matchModeSelect');
 
 // OnError Tab
 const onErrorToggle = $('#onErrorToggle');
@@ -50,7 +49,6 @@ const onErrorAddUrlBtn = $('#onErrorAddUrlBtn');
 const onErrorUrlList = $('#onErrorUrlList');
 const onErrorUrlEmptyState = $('#onErrorUrlEmptyState');
 const onErrorUrlSection = $('#onErrorUrlSection');
-const onErrorMatchModeSelect = $('#onErrorMatchModeSelect');
 
 // Focus Emulation Tab
 const focusEmulationToggle = $('#focusEmulationToggle');
@@ -59,7 +57,6 @@ const focusEmulationAddUrlBtn = $('#focusEmulationAddUrlBtn');
 const focusEmulationUrlList = $('#focusEmulationUrlList');
 const focusEmulationUrlEmptyState = $('#focusEmulationUrlEmptyState');
 const focusEmulationUrlSection = $('#focusEmulationUrlSection');
-const focusEmulationMatchModeSelect = $('#focusEmulationMatchModeSelect');
 
 // Advanced Tab
 const onLaunchToggle = $('#onLaunchToggle');
@@ -184,7 +181,6 @@ function populateSettings() {
   // Main
   intervalInput.value = settings.interval;
   langSelect.value = settings.language;
-  matchModeSelect.value = settings.matchMode;
 
   // On error
   onErrorToggle.checked = settings.onErrorEnabled;
@@ -272,11 +268,6 @@ function setupEventListeners() {
     if (e.key === 'Enter') addUrl();
   });
 
-  matchModeSelect.addEventListener('change', (e) => {
-    settings.matchMode = e.target.value;
-    saveAndUpdate();
-  });
-  
   // --- On Error Tab ---
 
   onErrorToggle.addEventListener('change', (e) => {
@@ -295,11 +286,6 @@ function setupEventListeners() {
     if (e.key === 'Enter') onErrorAddUrl();
   });
 
-  onErrorMatchModeSelect.addEventListener('change', (e) => {
-    settings.onErrorMatchMode = e.target.value;
-    saveAndUpdate();
-  });
-
   // --- Focus Emulation Tab ---
 
   focusEmulationToggle.addEventListener('change', (e) => {
@@ -311,11 +297,6 @@ function setupEventListeners() {
   focusEmulationAddUrlBtn.addEventListener('click', focusEmulationAddUrl);
   focusEmulationUrlInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') focusEmulationAddUrl();
-  });
-
-  focusEmulationMatchModeSelect.addEventListener('change', (e) => {
-    settings.focusEmulationMatchMode = e.target.value;
-    saveAndUpdate();
   });
 
   // --- Advanced toggles ---

@@ -2,7 +2,7 @@
  * @Author: WayneFerdon wayneferdon@hotmail.com
  * @Date: 2026-05-29 16:46:01
  * @LastEditors: WayneFerdon wayneferdon@hotmail.com
- * @LastEditTime: 2026-06-10 02:02:18
+ * @LastEditTime: 2026-06-15 13:48:18
  * @FilePath: \Auto-Refresh-Chronium\background.js
  * ----------------------------------------------------------------
  * Licensed to the .NET Foundation under one or more agreements.
@@ -210,7 +210,7 @@ async function getTargetTabs(settings) {
 			tabs = await chrome.tabs.query({});
 		} else if (settings.urls && settings.urls.length > 0) {
 			tabs = await chrome.tabs.query({});
-			tabs = tabs.filter(tab => matchesUrlList(tab.url, settings.urls, settings.matchMode));
+			tabs = tabs.filter(tab => matchesUrlList(tab.url, settings.urls));
 		} else {
 			const activeTabs = await chrome.tabs.query({ active: true, currentWindow: true });
 			if (activeTabs.length > 0) tabs = activeTabs;
@@ -276,52 +276,11 @@ function resetCountdown(settings) {
 // URL MATCHING
 // ═══════════════════════════════════════════════════════════
 
-function matchesUrlList(tabUrl, urls, matchMode) {
+function matchesUrlList(tabUrl, urls) {
 	if (!tabUrl) return false;
 
 	try {
-		const tabUrlObj = new URL(tabUrl);
-		const tabDomain = tabUrlObj.hostname.replace(/^www\./, '');
-
-		return urls.some(entry => {
-			try {
-				let entryDomain, entryPath, entrySearch;
-
-				if (entry.includes('://')) {
-					const entryUrl = new URL(entry);
-					entryDomain = entryUrl.hostname.replace(/^www\./, '');
-					entryPath = entryUrl.pathname;
-					entrySearch = entryUrl.search;
-				} else if (entry.includes('/')) {
-					const entryUrl = new URL('https://' + entry);
-					entryDomain = entryUrl.hostname.replace(/^www\./, '');
-					entryPath = entryUrl.pathname;
-					entrySearch = entryUrl.search;
-				} else {
-					// Just a domain name
-					return tabDomain === entry.replace(/^www\./, '');
-				}
-
-				// Domain must always match
-				if (tabDomain !== entryDomain) return false;
-				if (matchMode === 'domain') return true;
-
-				// Path match
-				if (matchMode === 'domainPath' || matchMode === 'domainPathQuery') {
-					const tabPath = tabUrlObj.pathname.replace(/\/$/, '') || '';
-					const cleanEntryPath = (entryPath || '').replace(/\/$/, '') || '';
-					if (cleanEntryPath && cleanEntryPath !== '' && tabPath !== cleanEntryPath) return false;
-					if (matchMode === 'domainPath') return true;
-
-					// Query match
-					return tabUrlObj.search === (entrySearch || '');
-				}
-
-				return true;
-			} catch (e) {
-				return false;
-			}
-		});
+		return urls.some(entry => tabUrl.match(new RegExp(entry)));
 	} catch (e) {
 		return false;
 	}
@@ -622,7 +581,7 @@ async function getOnErrorTargetTabs(settings) {
 	try {
 		if (settings.onErrorUrls && settings.onErrorUrls.length > 0) {
 			tabs = await chrome.tabs.query({});
-			tabs = tabs.filter(tab => matchesUrlList(tab.url, settings.onErrorUrls, settings.onErrorMatchMode));
+			tabs = tabs.filter(tab => matchesUrlList(tab.url, settings.onErrorUrls));
 		} else {
 			const activeTabs = await chrome.tabs.query({ active: true, currentWindow: true });
 			if (activeTabs.length > 0) tabs = activeTabs;
@@ -695,7 +654,7 @@ async function getFocusEmulationTargetTabs(settings) {
 	try {
 		if (settings.focusEmulationUrls && settings.focusEmulationUrls.length > 0) {
 			tabs = await chrome.tabs.query({});
-			tabs = tabs.filter(tab => matchesUrlList(tab.url, settings.focusEmulationUrls, settings.focusEmulationMatchMode));
+			tabs = tabs.filter(tab => matchesUrlList(tab.url, settings.focusEmulationUrls));
 		} else {
 			const activeTabs = await chrome.tabs.query({ active: true, currentWindow: true });
 			if (activeTabs.length > 0) tabs = activeTabs;

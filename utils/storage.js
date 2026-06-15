@@ -14,14 +14,11 @@
 export const DEFAULT_SETTINGS = {
   interval: 10,
   urls: [],
-  matchMode: 'domain', // 'domain' | 'domainPath' | 'domainPathQuery'
   onErrorEnabled: false,
   onErrorInterval: 60,
   onErrorUrls: [],
-  onErrorMatchMode: 'domain', // 'domain' | 'domainPath' | 'domainPathQuery'
   focusEmulationEnabled: false,
   focusEmulationUrls: [],
-  focusEmulationMatchMode: 'domain', // 'domain' | 'domainPath' | 'domainPathQuery'
   onLaunch: false,
   randomEnabled: false,
   randomMin: 5,

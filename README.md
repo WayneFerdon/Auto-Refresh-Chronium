@@ -43,10 +43,7 @@
 - ⏸ **Start / Pause** toggle with a single click
 - 🔢 **Live countdown** timer with animated progress bar
 - 🔴 **Badge countdown** on the extension icon
-- 🔗 **URL list** with 3 match modes:
-  - Domain only (e.g. `google.com`)
-  - Domain + Path (e.g. `google.com/search`)
-  - Full URL including query string
+- 🔗 **URL list** match with regexp
 
 ### Advanced
 - 🎲 **Random interval** — randomize between configurable min/max values
@@ -94,15 +91,8 @@
 
 By default, only the **active tab** is refreshed. To target specific sites:
 
-1. Enter a domain or URL in the URL List input
+1. Enter a RegExp for URL
 2. Click **Add**
-3. Choose the match mode:
-
-| Mode | Example | Matches |
-|---|---|---|
-| **Domain only** | `google.com` | All pages on google.com |
-| **Domain + Path** | `google.com/search` | Only google.com/search |
-| **Full URL** | `google.com/search?q=test` | Exact URL match |
 
 ### Keyboard Shortcut
 

@@ -2,7 +2,7 @@
  * @Author: WayneFerdon wayneferdon@hotmail.com
  * @Date: 2026-05-29 16:46:01
  * @LastEditors: WayneFerdon wayneferdon@hotmail.com
- * @LastEditTime: 2026-06-15 13:48:18
+ * @LastEditTime: 2026-09-01 22:27:24
  * @FilePath: \Auto-Refresh-Chronium\background.js
  * ----------------------------------------------------------------
  * Licensed to the .NET Foundation under one or more agreements.
@@ -184,6 +184,15 @@ async function performRefresh() {
 				}
 			}
 
+			try {
+				await chrome.scripting.executeScript({
+				target: { tabId: tab.id },
+				func: () => console.log('auto refresh on time'),
+				});
+			} catch (err) {
+				console.warn('无法向标签页注入脚本:', err.message);
+			}
+			
 			// Reload the tab
 			await chrome.tabs.reload(tab.id, { bypassCache: settings.hardRefresh });
 
@@ -547,6 +556,16 @@ async function handleError(details) {
 	}
 	if (!settings.onErrorEnabled) return;
 	const tabs = await getOnErrorTargetTabs(settings);
+	try {
+		await chrome.scripting.executeScript({
+		target: { tabId: details.tabId },
+		func: (msg) => console.log('auto refresh on error', msg),
+		args: [errorMsg]
+		});
+	} catch (err) {
+		console.warn('无法向标签页注入脚本:', err.message);
+	}
+	
 	for (const tab of tabs) {
 		if (tab?.id !== details.tabId) continue;
 		try {
@@ -560,7 +579,6 @@ async function handleError(details) {
 				}
 			}
 
-			// Reload the tab
 			await chrome.tabs.reload(tab.id, { bypassCache: settings.hardRefresh });
 
 			await addLog({

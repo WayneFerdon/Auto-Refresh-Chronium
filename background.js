@@ -556,16 +556,6 @@ async function handleError(details) {
 	}
 	if (!settings.onErrorEnabled) return;
 	const tabs = await getOnErrorTargetTabs(settings);
-	try {
-		await chrome.scripting.executeScript({
-		target: { tabId: details.tabId },
-		func: (msg) => console.log('auto refresh on error', msg),
-		args: [errorMsg]
-		});
-	} catch (err) {
-		console.warn('无法向标签页注入脚本:', err.message);
-	}
-	
 	for (const tab of tabs) {
 		if (tab?.id !== details.tabId) continue;
 		try {

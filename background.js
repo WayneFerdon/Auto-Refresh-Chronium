@@ -2,7 +2,7 @@
  * @Author: WayneFerdon wayneferdon@hotmail.com
  * @Date: 2026-05-29 16:46:01
  * @LastEditors: WayneFerdon wayneferdon@hotmail.com
- * @LastEditTime: 2026-09-01 22:27:24
+ * @LastEditTime: 2026-09-01 23:19:49
  * @FilePath: \Auto-Refresh-Chronium\background.js
  * ----------------------------------------------------------------
  * Licensed to the .NET Foundation under one or more agreements.
@@ -558,6 +558,7 @@ async function handleError(details) {
 	const tabs = await getOnErrorTargetTabs(settings);
 	for (const tab of tabs) {
 		if (tab?.id !== details.tabId) continue;
+		console.log('reload on error', tab.title);
 		try {
 			// Hard refresh: clear origin cache first
 			if (settings.hardRefresh) {

@@ -24,6 +24,7 @@ const state = {
 	refreshCount: 0,
 	pageHashes: {},       // tabId -> hash string
 	tickIntervalId: null, // setInterval ID
+	isRefreshing: false,  // guard against re-entry while performing refresh
 };
 
 // ═══════════════════════════════════════════════════════════
@@ -102,12 +103,24 @@ function stopTick() {
 async function tick() {
 	if (!state.isRunning) return;
 
+	// Prevent re-entry while a refresh batch is in flight (setInterval does
+	// not wait for async work, so without this guard every second would
+	// trigger another performRefresh once countdown hits 0).
+	if (state.isRefreshing) return;
+
 	state.countdown--;
 	updateBadge();
 	broadcastState();
 
 	if (state.countdown <= 0) {
-		await performRefresh();
+		state.isRefreshing = true;
+		try {
+			await performRefresh();
+		} catch (e) {
+			console.error('Auto Refresh: performRefresh failed:', e);
+		} finally {
+			state.isRefreshing = false;
+		}
 	}
 
 	// Persist for recovery
@@ -166,49 +179,88 @@ async function performRefresh() {
 		return;
 	}
 
-	for (const tab of tabs) {
-		try {
-			// Page change detection (before refresh)
-			if (settings.detectChanges) {
-				const shouldStop = await checkPageChange(tab, settings);
-				if (shouldStop) return;
-			}
+	// Page change detection (serial — may trigger a stop)
+	if (settings.detectChanges) {
+		for (const tab of tabs) {
+			const shouldStop = await checkPageChange(tab, settings);
+			if (shouldStop) return;
+		}
+	}
 
-			// Hard refresh: clear origin cache first
-			if (settings.hardRefresh) {
-				try {
-					const origin = new URL(tab.url).origin;
-					await chrome.browsingData.remove({ origins: [origin] }, { cache: true });
-				} catch (e) {
-					// Silently continue
-				}
-			}
-
+	// Hard refresh: clear origin cache first (dedupe by origin)
+	if (settings.hardRefresh) {
+		const origins = new Set();
+		for (const tab of tabs) {
 			try {
-				await chrome.scripting.executeScript({
-				target: { tabId: tab.id },
-				func: () => console.log('auto refresh on time'),
-				});
-			} catch (err) {
-				console.warn('无法向标签页注入脚本:', err.message);
+				origins.add(new URL(tab.url).origin);
+			} catch (e) {
+				// ignore malformed URLs
 			}
-			
-			// Reload the tab
-			await chrome.tabs.reload(tab.id, { bypassCache: settings.hardRefresh });
+		}
+		await Promise.allSettled(
+			[...origins].map(origin =>
+				chrome.browsingData.remove({ origins: [origin] }, { cache: true }).catch(() => { })
+			)
+		);
+	}
 
-			await addLog({
+	// Refresh all target tabs concurrently
+	const results = await Promise.allSettled(
+		tabs.map(tab => refreshTab(tab, settings))
+	);
+
+	// Collect logs for tabs that successfully reloaded
+	const logs = [];
+	for (let i = 0; i < results.length; i++) {
+		const r = results[i];
+		if (r.status === 'fulfilled' && r.value === true) {
+			const tab = tabs[i];
+			logs.push({
 				type: 'refresh',
 				tabId: tab.id,
 				url: tab.url,
 				title: tab.title || 'Untitled',
 			});
-		} catch (e) {
-			console.error('Auto Refresh: Failed to refresh tab', tab.id, e);
 		}
 	}
 
+	// Serial log writes (avoid storage race)
+	for (const log of logs) {
+		try {
+			await addLog(log);
+		} catch (e) {
+			console.warn('Auto Refresh: addLog failed', e);
+		}
+	}
+
+	// Count one per refresh round (每完成一轮倒计时算一次).
+	// If you'd rather count per-tab, use: state.refreshCount += logs.length;
 	state.refreshCount++;
+
 	resetCountdown(settings);
+	broadcastState();
+}
+
+// Refresh a single tab. Returns true on success, false otherwise.
+async function refreshTab(tab, settings) {
+	try {
+		// Inject a small marker script
+		try {
+			await chrome.scripting.executeScript({
+				target: { tabId: tab.id },
+				func: () => console.log('auto refresh on time'),
+			});
+		} catch (err) {
+			console.warn('无法向标签页注入脚本:', err.message);
+		}
+
+		// Reload the tab
+		await chrome.tabs.reload(tab.id, { bypassCache: settings.hardRefresh });
+		return true;
+	} catch (e) {
+		console.error('Auto Refresh: Failed to refresh tab', tab.id, e);
+		return false;
+	}
 }
 
 async function getTargetTabs(settings) {
@@ -314,6 +366,7 @@ async function doStart() {
 	state.isRunning = true;
 	state.refreshCount = 0;
 	state.pageHashes = {};
+	state.isRefreshing = false;
 
 	startTick();
 	startKeepAlive();
@@ -348,6 +401,7 @@ function doStop() {
 	state.countdown = 0;
 	state.refreshCount = 0;
 	state.pageHashes = {};
+	state.isRefreshing = false;
 	updateBadge();
 	persistState();
 	return { success: true, state: getStateSnapshot() };
@@ -365,13 +419,13 @@ function formatSeconds(seconds, format = 'auto') {
 	if (format === 'auto') {
 		switch (true) {
 			case seconds >= 6000: // 99*60+59
-				format = 'hhmm'
+				format = 'hhmm';
 				break;
 			case seconds >= 1000:
-				format = 'mmss'
+				format = 'mmss';
 				break;
 			default:
-				format = 'ss'
+				format = 'ss';
 				break;
 		}
 	}
@@ -393,7 +447,7 @@ function formatSeconds(seconds, format = 'auto') {
 
 function updateBadge() {
 	if (state.isRunning) {
-		const text = formatSeconds(state.countdown); // state.countdown > 999 ? '999' : state.countdown.toString();
+		const text = formatSeconds(state.countdown);
 		chrome.action.setBadgeText({ text });
 		chrome.action.setBadgeBackgroundColor({ color: '#ffffff' });
 		chrome.action.setBadgeTextColor({ color: '#000000' });
@@ -541,46 +595,67 @@ function safeNotify(id, options) {
 	}
 }
 
+// ═══════════════════════════════════════════════════════════
+// RELOAD-ON-ERROR
+// ═══════════════════════════════════════════════════════════
+
+// Dedupe key set so the same tab isn't reloaded twice concurrently
+// when both webRequest and webNavigation fire for the same failure.
+const errorReloadPending = new Set();
+
 chrome.webRequest.onErrorOccurred.addListener(handleError, { urls: ["<all_urls>"] });
 chrome.webNavigation.onErrorOccurred.addListener(handleError);
 
 async function handleError(details) {
-	let settings = await getSettings();
-	if (!settings.onErrorEnabled) return;
+	// Only top-frame errors matter
 	if (details.frameId !== 0) return;
-	let waited = 0;
-	while (waited < settings.onErrorInterval) {
-		await new Promise(resolve => setTimeout(resolve, 1000));
-		settings = await getSettings();
-		waited++;
-	}
-	if (!settings.onErrorEnabled) return;
-	const tabs = await getOnErrorTargetTabs(settings);
-	for (const tab of tabs) {
-		if (tab?.id !== details.tabId) continue;
-		console.log('reload on error', tab.title);
-		try {
-			// Hard refresh: clear origin cache first
-			if (settings.hardRefresh) {
-				try {
-					const origin = new URL(tab.url).origin;
-					await chrome.browsingData.remove({ origins: [origin] }, { cache: true });
-				} catch (e) {
-					// Silently continue
-				}
-			}
+	if (details.tabId == null || details.tabId < 0) return;
 
-			await chrome.tabs.reload(tab.id, { bypassCache: settings.hardRefresh });
+	const key = details.tabId;
+	if (errorReloadPending.has(key)) return;
+	errorReloadPending.add(key);
 
-			await addLog({
-				type: 'refresh',
-				tabId: tab.id,
-				url: tab.url,
-				title: tab.title || 'Untitled',
-			});
-		} catch (e) {
-			console.error('Auto Refresh: Failed to refresh tab', tab.id, e);
+	try {
+		let settings = await getSettings();
+		if (!settings.onErrorEnabled) return;
+
+		// Wait configured seconds before reloading (in case it self-recovers)
+		let waited = 0;
+		while (waited < settings.onErrorInterval) {
+			await new Promise(resolve => setTimeout(resolve, 1000));
+			settings = await getSettings();
+			if (!settings.onErrorEnabled) return;
+			waited++;
 		}
+
+		const tabs = await getOnErrorTargetTabs(settings);
+		const tab = tabs.find(t => t?.id === details.tabId);
+		if (!tab) return;
+
+		console.log('reload on error', tab.title);
+
+		// Hard refresh: clear origin cache first
+		if (settings.hardRefresh) {
+			try {
+				const origin = new URL(tab.url).origin;
+				await chrome.browsingData.remove({ origins: [origin] }, { cache: true });
+			} catch (e) {
+				// Silently continue
+			}
+		}
+
+		await chrome.tabs.reload(tab.id, { bypassCache: settings.hardRefresh });
+
+		await addLog({
+			type: 'refresh',
+			tabId: tab.id,
+			url: tab.url,
+			title: tab.title || 'Untitled',
+		});
+	} catch (e) {
+		console.error('Auto Refresh: onError reload failed', e);
+	} finally {
+		errorReloadPending.delete(key);
 	}
 }
 
@@ -606,6 +681,10 @@ async function getOnErrorTargetTabs(settings) {
 	);
 }
 
+// ═══════════════════════════════════════════════════════════
+// LAUNCH ON STARTUP
+// ═══════════════════════════════════════════════════════════
+
 async function onLaunch() {
 	const settings = await getSettings();
 	if (!settings.onLaunch) return;
@@ -614,47 +693,51 @@ async function onLaunch() {
 
 onLaunch();
 
+// ═══════════════════════════════════════════════════════════
+// FOCUS EMULATION (chrome.debugger)
+// ═══════════════════════════════════════════════════════════
+
 const activeTabs = new Set();
 
 async function enableFocusEmulationForTab(tabId) {
 	if (activeTabs.has(tabId)) return;
-	let settings = await getSettings();
+	const settings = await getSettings();
 	if (!settings.focusEmulationEnabled) return;
 	const tabs = await getFocusEmulationTargetTabs(settings);
-	let tab;
-	if (!(tab = tabs.find(tab => tab.id === tabId))) return;
+	const tab = tabs.find(t => t.id === tabId);
+	if (!tab) return;
 
-    try {
-        await chrome.debugger.attach({ tabId: tabId }, "1.3");
-        await chrome.debugger.sendCommand({ tabId: tabId }, "Emulation.setFocusEmulationEnabled", { enabled: true });
-        activeTabs.add(tabId);
-    } catch (error) {
-        console.warn(`Tab ${tabId}-${tab.title} Failed Focus Emulation: ${error.message}`);
-    }
+	try {
+		await chrome.debugger.attach({ tabId: tabId }, "1.3");
+		await chrome.debugger.sendCommand({ tabId: tabId }, "Emulation.setFocusEmulationEnabled", { enabled: true });
+		activeTabs.add(tabId);
+	} catch (error) {
+		console.warn(`Tab ${tabId}-${tab.title} Failed Focus Emulation: ${error.message}`);
+	}
 }
 
 chrome.tabs.onCreated.addListener((tab) => {
-    enableFocusEmulationForTab(tab.id);
+	enableFocusEmulationForTab(tab.id);
 });
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    if (changeInfo.status === 'complete') {
-        enableFocusEmulationForTab(tabId);
-    }
+	if (changeInfo.status === 'complete') {
+		enableFocusEmulationForTab(tabId);
+	}
 });
 
 async function enableForAllTabs() {
-    const tabs = await chrome.tabs.query({});
-    for (const tab of tabs) {
-        enableFocusEmulationForTab(tab.id);
-    }
+	const tabs = await chrome.tabs.query({});
+	for (const tab of tabs) {
+		enableFocusEmulationForTab(tab.id);
+	}
 }
 
 chrome.debugger.onDetach.addListener((source, reason) => {
-    if (source.tabId) {
-        activeTabs.delete(source.tabId);
-        console.log(`Tab ${source.tabId} DevTool has detached by: ${reason}`);
-    }
+	if (source.tabId) {
+		activeTabs.delete(source.tabId);
+		console.log(`Tab ${source.tabId} DevTool has detached by: ${reason}`);
+	}
 });
 
 async function getFocusEmulationTargetTabs(settings) {
